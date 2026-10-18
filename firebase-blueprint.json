@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with voice preferences and personal autofill memory.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "voiceName": { "type": "string", "maxLength": 64 },
+        "englishDialect": { "type": "string", "maxLength": 32 },
+        "speakingRate": { "type": "number" },
+        "pitch": { "type": "number" },
+        "confirmationMode": { "type": "string", "maxLength": 32 },
+        "autoFillProfile": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "voiceName"]
+    },
+    "Session": {
+      "title": "Session",
+      "description": "A web page reading and form-filling session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "pageUrl": { "type": "string", "maxLength": 512 },
+        "pageTitle": { "type": "string", "maxLength": 256 },
+        "status": { "type": "string", "maxLength": 32 },
+        "totalFields": { "type": "number" },
+        "filledFields": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "pageUrl", "status"]
+    },
+    "FormFill": {
+      "title": "FormFill",
+      "description": "A field filled through voice verification on a webpage.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "sessionId": { "type": "string", "maxLength": 128 },
+        "fieldLabel": { "type": "string", "maxLength": 256 },
+        "fieldType": { "type": "string", "maxLength": 64 },
+        "promptSpoken": { "type": "string", "maxLength": 512 },
+        "rawSpeech": { "type": "string", "maxLength": 512 },
+        "verifiedValue": { "type": "string", "maxLength": 512 },
+        "isVerified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "fieldLabel", "verifiedValue"]
+    },
+    "CustomRule": {
+      "title": "CustomRule",
+      "description": "User specific website voice navigation preferences.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "domain": { "type": "string", "maxLength": 256 },
+        "skipSelectors": { "type": "string", "maxLength": 512 },
+        "customPronunciation": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "domain"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Individual user preferences and autofill profile"
+    },
+    "/users/{userId}/sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/Session" },
+      "description": "Web reading and interaction sessions for a user"
+    },
+    "/users/{userId}/formFills/{formFillId}": {
+      "schema": { "$ref": "#/entities/FormFill" },
+      "description": "Logged field interactions and verifications"
+    },
+    "/users/{userId}/customRules/{ruleId}": {
+      "schema": { "$ref": "#/entities/CustomRule" },
+      "description": "Domain-specific voice customization rules"
+    }
+  }
+}

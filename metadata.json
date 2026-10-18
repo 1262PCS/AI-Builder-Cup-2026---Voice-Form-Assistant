@@ -1,0 +1,10 @@
+{
+  "name": "Remix Voice Form Assistant",
+  "description": "Chrome extension prototype powered by Google Text-to-Speech and Firebase. Reads web pages aloud, prompts users verbally for form inputs, validates responses, and autofills forms hands-free.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

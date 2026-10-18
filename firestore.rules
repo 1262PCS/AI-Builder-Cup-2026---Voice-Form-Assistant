@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'voiceName']) &&
+             data.keys().hasOnly(['uid', 'email', 'displayName', 'voiceName', 'englishDialect', 'speakingRate', 'pitch', 'confirmationMode', 'autoFillProfile', 'createdAt', 'updatedAt']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.voiceName is string && data.voiceName.size() <= 64 &&
+             (!('englishDialect' in data) || (data.englishDialect is string && data.englishDialect.size() <= 32)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 128)) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+             (!('speakingRate' in data) || data.speakingRate is number) &&
+             (!('pitch' in data) || data.pitch is number) &&
+             (!('confirmationMode' in data) || (data.confirmationMode is string && data.confirmationMode.size() <= 32)) &&
+             (!('autoFillProfile' in data) || data.autoFillProfile is map);
+    }
+
+    function isValidSession(data) {
+      return data.keys().hasAll(['id', 'userId', 'pageUrl', 'status']) &&
+             data.keys().hasOnly(['id', 'userId', 'pageUrl', 'pageTitle', 'status', 'totalFields', 'filledFields', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.pageUrl is string && data.pageUrl.size() <= 512 &&
+             data.status is string && data.status.size() <= 32 &&
+             (!('pageTitle' in data) || (data.pageTitle is string && data.pageTitle.size() <= 256)) &&
+             (!('totalFields' in data) || data.totalFields is number) &&
+             (!('filledFields' in data) || data.filledFields is number);
+    }
+
+    function isValidFormFill(data) {
+      return data.keys().hasAll(['id', 'userId', 'fieldLabel', 'verifiedValue']) &&
+             data.keys().hasOnly(['id', 'userId', 'sessionId', 'fieldLabel', 'fieldType', 'promptSpoken', 'rawSpeech', 'verifiedValue', 'isVerified', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.fieldLabel is string && data.fieldLabel.size() <= 256 &&
+             data.verifiedValue is string && data.verifiedValue.size() <= 512 &&
+             (!('sessionId' in data) || (data.sessionId is string && data.sessionId.size() <= 128)) &&
+             (!('fieldType' in data) || (data.fieldType is string && data.fieldType.size() <= 64)) &&
+             (!('promptSpoken' in data) || (data.promptSpoken is string && data.promptSpoken.size() <= 512)) &&
+             (!('rawSpeech' in data) || (data.rawSpeech is string && data.rawSpeech.size() <= 512)) &&
+             (!('isVerified' in data) || data.isVerified is bool);
+    }
+
+    function isValidCustomRule(data) {
+      return data.keys().hasAll(['id', 'userId', 'domain']) &&
+             data.keys().hasOnly(['id', 'userId', 'domain', 'skipSelectors', 'customPronunciation', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.domain is string && data.domain.size() <= 256 &&
+             (!('skipSelectors' in data) || (data.skipSelectors is string && data.skipSelectors.size() <= 512)) &&
+             (!('customPronunciation' in data) || (data.customPronunciation is string && data.customPronunciation.size() <= 512));
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().createdAt == request.time;
+      allow update: if isOwner(userId) && isValidUser(incoming()) && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+      allow delete: if false;
+
+      match /sessions/{sessionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(sessionId) && isValidSession(incoming()) && incoming().createdAt == request.time;
+        allow update: if isOwner(userId) && isValidId(sessionId) && isValidSession(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+        allow delete: if isOwner(userId) && isValidId(sessionId);
+      }
+
+      match /formFills/{formFillId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(formFillId) && isValidFormFill(incoming()) && incoming().createdAt == request.time;
+        allow delete: if isOwner(userId) && isValidId(formFillId);
+      }
+
+      match /customRules/{ruleId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(ruleId) && isValidCustomRule(incoming()) && incoming().createdAt == request.time;
+        allow update: if isOwner(userId) && isValidId(ruleId) && isValidCustomRule(incoming()) && incoming().userId == existing().userId;
+        allow delete: if isOwner(userId) && isValidId(ruleId);
+      }
+    }
+  }
+}
